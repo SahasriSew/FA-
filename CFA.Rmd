@@ -1,0 +1,61 @@
+---
+title: "CFA"
+author: "S18511"
+date: "2024-04-07"
+output: pdf_document
+---
+
+```{r}
+library(lavaan)
+```
+
+```{r}
+DataSet = read.csv(file = "D:\\uni\\4th yr\\ST405 - 2\\Mini Project\\Mini_Project\\Data\\GEI.csv")
+DataSet = DataSet %>% filter(Year == 2021)
+DataSet = DataSet[,-c(1)]
+DataSet = DataSet %>% drop_na()
+DataSet %>% summarise(across(everything(), ~ sum(is.na(.))))
+dim(DataSet)
+View(DataSet)
+DataSet = scale(DataSet)
+
+```
+
+
+```{r}
+GlobalEconomy_1 = ' 
+  f1 =~ AMA + IMF
+  f2 =~ Population + Agriculture +inventories + Manufacturing + Mining
+  f3 =~ PCGNI + Construction + Exports + FinalConsExpen +     GeneralConsExpen + GCF + GFCF + Household + Imports + Other_Activities + TotalValueAdd + Transport + GNI + GDP  
+  
+  AMA ~~ AMA
+  IMF ~~ IMF
+  Population ~~ Population
+  Agriculture ~~ Agriculture
+  inventories ~~ inventories
+  Manufacturing ~~ Manufacturing
+  Mining ~~ Mining
+  PCGNI ~~ PCGNI
+  Construction ~~ Construction
+  Exports ~~ Exports
+  FinalConsExpen  ~~ FinalConsExpen 
+  GeneralConsExpen ~~ GeneralConsExpen
+  GCF ~~ GCF
+  GFCF ~~ GFCF
+  Household ~~ Household
+  Imports ~~ Imports
+  Other_Activities ~~ Other_Activities
+  TotalValueAdd ~~ TotalValueAdd
+  Transport ~~ Transport
+  GNI ~~ GNI
+  GDP ~~ GDP
+'
+
+
+```
+
+
+```{r}
+ result_1= cfa(GlobalEconomy_1, data = DataSet)
+summary(result_1, fit.measures=TRUE)
+```

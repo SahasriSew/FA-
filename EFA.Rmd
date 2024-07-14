@@ -1,0 +1,145 @@
+---
+title: "CVD"
+author: "S18511"
+date: "2024-04-07"
+output: pdf_document
+---
+```{r}
+library(tidyverse)		
+library(dplyr)		
+library(corrplot)		
+library(psych)		
+library(GPArotation)
+```
+
+```{r}
+DataSet = read.csv(file = "D:\\uni\\4th yr\\ST405 - 2\\Mini Project\\Mini_Project\\Data\\GEI.csv")
+DataSet = DataSet %>% filter(Year == 2021)
+DataSet = DataSet[,-c(1)]
+head(DataSet)
+```
+
+```{r}
+DataSet %>% summarise(across(everything(), ~ sum(is.na(.))))
+```
+There are NA values , Removing them
+```{r}
+DataSet = DataSet %>% drop_na()
+DataSet %>% summarise(across(everything(), ~ sum(is.na(.))))
+dim(DataSet)
+```
+
+Since  variables are on different scales and units of measurements, the data set is standardized.					
+```{r}
+DataSet = scale(DataSet)					
+head(DataSet)
+```
+
+
+
+```{r}
+DataSet_Cor = cor(DataSet)					
+DataSet_Cor
+corrplot(round(DataSet_Cor,digits = 2), method = "color", type = "upper", tl.col = "black", tl.srt = 45, tl.cex = 0.7)
+
+```
+As an overall, most of correlations are close to 1 while (- values thiyena deka kiynna)
+
+```{r}
+cortest.bartlett(DataSet_Cor, n= 162)
+```
+
+
+```{r}
+n = dim(DataSet_Cor)[1]
+DataSet_Scree = tibble(x = 1:n, 
+                   y = sort(eigen(DataSet_Cor)$value, decreasing = TRUE))
+
+scree_plot = DataSet_Scree %>% ggplot(aes(x, y)) +
+  geom_point() +
+  geom_line() +
+  ylab("Presentage of explanined variances")
+  scale_x_continuous(breaks = 1:n) +
+  ggtitle("Scree plot")
+
+scree_plot
+	
+```
+(1): according to plot,the non-steep of the graph can be seen after the 5th , therefore according to this, number of of Factors to Extract is 4.					
+ 
+
+```{r}
+eigenValues = eigen(DataSet_Cor)	
+df=data.frame(eigenValues$values,eigenValues$values >1,prportion_of_variance_explanined=eigenValues$values / sum(eigenValues$values)*100,Cumulative_prportion_of_variance_explanined=cumsum(eigenValues$values / sum(eigenValues$values)*100))					
+df
+```
+(2): according to method of eigenvalues at least one, considering above results, number of of Factors to Extract is 3. Also, 4th eigen value also close to 1.					
+
+(3): by considering last column , cumulative proportion of at least 80% is explained by extracting  3 number of factors because by 1st two factors it already explains 91.88% of total variance.					
+
+Therefore, considering above (1),(2),(3) number of factors are 2
+
+
+estimating the parameters of the factor model	
+using  Maximum likelihood Estimation Method	
+```{r}
+fa_by_ML =fa(DataSet_Cor,nfactors = 3, fm= 'ml')
+factor_loadings_ML = fa_by_ML$loadings
+LL_ML = factor_loadings_ML %*% t(factor_loadings_ML)					
+residual_matrix_ML = DataSet_Cor - LL_ML					
+round(residual_matrix_ML,digits = 2)	
+```
+the there some values notshown values in the loading matrix because they might considered to be negligible. write variables using factors
+
+using  = principal component Method	
+```{r}
+fa_by_PC= principal(DataSet, nfactors = 3, rotate = 'none')
+factor_loadings_PC = fa_by_PC$loadings	
+LL_PC = factor_loadings_PC %*% t(factor_loadings_PC)					
+residual_matrix_PC = DataSet_Cor - LL_PC					
+round(residual_matrix_PC,digits = 2)	
+```
+Since, residuals under PC are musch less than those under ML. Therefore, PC method is more approproate.
+
+```{r}
+factor_loadings_PC
+```
+
+
+Interpreation About Factor Lodings of PC Method
+For the first factor, execpt variables AMA and IMF all other variables have positive loading on F1. Among them, PCGNI  varibles has much lower values.
+
+In the sencond factor, PCGNI,FinalConsExpen, Household Other_Activities, TotalValueAdd, Transport, Trade, GNI and GDP have negative loadings while all others have positeves.
+
+For the third factor, AMA and IMF have lager positive value while inventories smaller positive and Population, Agriculture, inventories, GCF,GFCF, Manufacturing and Mining have negative values.
+
+Here for varible AMA, IMF,PCGNI and inventories, they have loadings that are close to each other.
+
+in oder to over come from that factor rotation can be used.
+```{r}
+fa_by_PC= principal(DataSet, nfactors = 3, rotate = "varimax")
+fa_by_PC$loadings
+```
+
+This output clearly shows AMA, IMF are highly loaded on 3rd factor. PGCNI highly loaded on 1st factor while inventories on the 2nd factor.
+As a conclusion rotated loadings indicate that global currency exchanging factor (i.e AMA and IMF)highly loaded on 3rd factor and  resource usage factor(i.e Population, Agriculture, inventories, Manufacturing and Mining) highly loaded of 2nd factor while development of economy factor (i.e other variables) highly loaded on 1st factor.
+
+Estimating Factor Scores
+```{r}
+#Ordinary Least Squares (OLS)
+Factor_Scores_OLS = factor.scores(DataSet,fa_by_PC$loadings,method= "regression")
+Factor_Scores_OLS
+```
+
+```{r}
+#Regression Method
+Factor_Scores_Reg = factanal(DataSet,3, rotation = "none")
+loadings <- Factor_Scores_Reg$loadings
+Factor_scores_regression <- as.matrix(DataSet) %*% loadings
+Factor_scores_regression
+```
+
+```{r}
+view(DataSet)
+```
+
